@@ -3,6 +3,7 @@ const env = require('./env');
 
 let isConnected = false;
 let listenersAttached = false;
+let connectPromise = null;
 
 function attachConnectionListeners() {
   if (listenersAttached) {
@@ -10,6 +11,7 @@ function attachConnectionListeners() {
   }
 
   mongoose.connection.on('connected', () => {
+    isConnected = true;
     console.log('MongoDB connected.');
   });
 
@@ -26,26 +28,36 @@ function attachConnectionListeners() {
 }
 
 async function connectDatabase() {
-  if (isConnected) {
+  if (isConnected || mongoose.connection.readyState === 1) {
+    return mongoose.connection;
+  }
+
+  if (connectPromise) {
+    await connectPromise;
     return mongoose.connection;
   }
 
   attachConnectionListeners();
   mongoose.set('bufferCommands', false);
 
-  try {
-    await mongoose.connect(env.mongoUri, {
+  connectPromise = mongoose
+    .connect(env.mongoUri, {
       autoIndex: true,
       serverSelectionTimeoutMS: 10000
+    })
+    .catch((error) => {
+      const details = [
+        'Failed to connect to MongoDB.',
+        `Reason: ${error.message}`,
+        'Checklist: verify MONGO_URI, Atlas username/password, Atlas IP allowlist (or 0.0.0.0/0 for dev), and network access.'
+      ].join(' ');
+      throw new Error(details);
+    })
+    .finally(() => {
+      connectPromise = null;
     });
-  } catch (error) {
-    const details = [
-      'Failed to connect to MongoDB.',
-      `Reason: ${error.message}`,
-      'Checklist: verify MONGO_URI, Atlas username/password, Atlas IP allowlist (or 0.0.0.0/0 for dev), and network access.'
-    ].join(' ');
-    throw new Error(details);
-  }
+
+  await connectPromise;
 
   isConnected = true;
   return mongoose.connection;
