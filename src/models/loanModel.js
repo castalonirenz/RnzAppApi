@@ -22,6 +22,12 @@ const loanSchema = new mongoose.Schema(
       type: String,
       required: true
     },
+    interestType: {
+      type: String,
+      enum: ['monthly', 'annum'],
+      default: 'monthly',
+      required: true
+    },
     durationMonths: {
       type: Number,
       required: true
@@ -55,6 +61,7 @@ function toLoanDTO(loanDoc, totalPaid = '0.00') {
     borrower_name: loanDoc.borrowerName,
     principal: loanDoc.principal,
     interest_rate: loanDoc.interestRate,
+    interest_type: loanDoc.interestType || 'monthly',
     duration_months: loanDoc.durationMonths,
     total_receivable: loanDoc.totalReceivable,
     status: loanDoc.status,
@@ -97,6 +104,7 @@ class LoanModel {
         borrowerName: payload.borrowerName,
         principal: payload.principal,
         interestRate: payload.interestRate,
+        interestType: payload.interestType,
         durationMonths: payload.durationMonths,
         totalReceivable: payload.totalReceivable
       }

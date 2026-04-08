@@ -10,6 +10,10 @@ const loanValidationRules = [
   body('borrowerName').trim().notEmpty().withMessage('Borrower name is required.'),
   body('principal').isFloat({ gt: 0 }).withMessage('Principal must be greater than zero.'),
   body('interestRate').isFloat({ min: 0 }).withMessage('Interest rate must be zero or greater.'),
+  body('interestType')
+    .optional()
+    .isIn(['monthly', 'annum'])
+    .withMessage('Interest type must be monthly or annum.'),
   body('durationMonths').isInt({ gt: 0 }).withMessage('Duration must be a positive integer.')
 ];
 

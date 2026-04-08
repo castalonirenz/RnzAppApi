@@ -24,16 +24,22 @@ function subtractAmounts(minuend, subtrahend) {
   return fromCents(toCents(minuend) - toCents(subtrahend));
 }
 
-function calculateTotalReceivable(principal, interestRate, durationMonths) {
+function calculateTotalReceivable(principal, interestRate, durationMonths, interestType = 'monthly') {
   const principalCents = toCents(principal);
   const rate = Number(interestRate);
   const duration = Number(durationMonths);
+  const type = String(interestType || 'monthly').toLowerCase();
 
   if (!Number.isFinite(rate) || !Number.isFinite(duration)) {
     throw new Error('Invalid interest rate or duration.');
   }
 
-  const interestCents = Math.round(principalCents * rate * duration);
+  if (!['monthly', 'annum'].includes(type)) {
+    throw new Error('Invalid interest type.');
+  }
+
+  const timeInYears = type === 'annum' ? duration / 12 : duration;
+  const interestCents = Math.round(principalCents * rate * timeInYears);
   return fromCents(principalCents + interestCents);
 }
 

@@ -25,6 +25,7 @@ function formatLoan(loan) {
     borrowerName: loan.borrower_name,
     principal: normalizeAmount(loan.principal),
     interestRate: normalizeAmount(loan.interest_rate),
+    interestType: loan.interest_type || 'monthly',
     durationMonths: loan.duration_months,
     totalReceivable: normalizeAmount(loan.total_receivable),
     totalPaid,
@@ -53,14 +54,21 @@ class LoanService {
   static async createLoan(userId, payload) {
     const principal = normalizeAmount(payload.principal);
     const interestRate = normalizeAmount(payload.interestRate);
+    const interestType = String(payload.interestType || 'monthly').toLowerCase();
     const durationMonths = Number(payload.durationMonths);
-    const totalReceivable = calculateTotalReceivable(principal, Number(interestRate), durationMonths);
+    const totalReceivable = calculateTotalReceivable(
+      principal,
+      Number(interestRate),
+      durationMonths,
+      interestType
+    );
 
     const loan = await LoanModel.create({
       userId,
       borrowerName: payload.borrowerName,
       principal,
       interestRate,
+      interestType,
       durationMonths,
       totalReceivable,
       status: 'Pending'
@@ -88,13 +96,20 @@ class LoanService {
 
     const principal = normalizeAmount(payload.principal);
     const interestRate = normalizeAmount(payload.interestRate);
+    const interestType = String(payload.interestType || 'monthly').toLowerCase();
     const durationMonths = Number(payload.durationMonths);
-    const totalReceivable = calculateTotalReceivable(principal, Number(interestRate), durationMonths);
+    const totalReceivable = calculateTotalReceivable(
+      principal,
+      Number(interestRate),
+      durationMonths,
+      interestType
+    );
 
     const updatedLoan = await LoanModel.updateById(loanId, userId, {
       borrowerName: payload.borrowerName,
       principal,
       interestRate,
+      interestType,
       durationMonths,
       totalReceivable
     });

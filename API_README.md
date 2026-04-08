@@ -151,6 +151,10 @@ Success (`200`):
 
 ## Loan Endpoints
 
+Interest calculation behavior:
+- `interestType: "monthly"` uses `Total = P + (P * r * durationMonths)`
+- `interestType: "annum"` uses `Total = P + (P * r * (durationMonths / 12))`
+
 ### 5) List Loans
 
 - Method: `GET`
@@ -169,6 +173,7 @@ Success (`200`):
       "borrowerName": "John Doe",
       "principal": "10000.00",
       "interestRate": "0.05",
+      "interestType": "monthly",
       "durationMonths": 12,
       "totalReceivable": "16000.00",
       "totalPaid": "2000.00",
@@ -193,6 +198,7 @@ Request body:
   "borrowerName": "John Doe",
   "principal": 10000,
   "interestRate": 0.05,
+  "interestType": "monthly",
   "durationMonths": 12
 }
 ```
@@ -201,6 +207,7 @@ Validation:
 - `borrowerName` required
 - `principal` must be greater than 0
 - `interestRate` must be 0 or greater
+- `interestType` must be `monthly` or `annum` (optional, defaults to `monthly`)
 - `durationMonths` must be a positive integer
 
 Success (`201`):
@@ -215,6 +222,7 @@ Success (`201`):
     "borrowerName": "John Doe",
     "principal": "10000.00",
     "interestRate": "0.05",
+    "interestType": "monthly",
     "durationMonths": 12,
     "totalReceivable": "16000.00",
     "totalPaid": "0.00",
@@ -245,6 +253,7 @@ Success (`200`):
     "borrowerName": "John Doe",
     "principal": "10000.00",
     "interestRate": "0.05",
+    "interestType": "monthly",
     "durationMonths": 12,
     "totalReceivable": "16000.00",
     "totalPaid": "2000.00",
@@ -271,6 +280,7 @@ Request body:
   "borrowerName": "John Doe Updated",
   "principal": 12000,
   "interestRate": 0.05,
+  "interestType": "annum",
   "durationMonths": 10
 }
 ```
@@ -287,6 +297,7 @@ Success (`200`):
     "borrowerName": "John Doe Updated",
     "principal": "12000.00",
     "interestRate": "0.05",
+    "interestType": "annum",
     "durationMonths": 10,
     "totalReceivable": "18000.00",
     "totalPaid": "0.00",
@@ -331,6 +342,7 @@ Success (`200`):
     "borrowerName": "John Doe Updated",
     "principal": "12000.00",
     "interestRate": "0.05",
+    "interestType": "annum",
     "durationMonths": 10,
     "totalReceivable": "18000.00",
     "totalPaid": "0.00",
@@ -390,6 +402,7 @@ Success (`201`):
       "borrowerName": "John Doe",
       "principal": "10000.00",
       "interestRate": "0.05",
+      "interestType": "monthly",
       "durationMonths": 12,
       "totalReceivable": "16000.00",
       "totalPaid": "2000.00",
