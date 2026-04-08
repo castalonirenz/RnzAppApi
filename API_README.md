@@ -1,6 +1,7 @@
 # My Borrower API Endpoint Docs
 
 Base URL (local): `http://localhost:4000`  
+Base URL (Vercel): `https://<your-api-project>.vercel.app`  
 API Prefix: `/api`
 Database: MongoDB (ObjectId-based IDs)
 

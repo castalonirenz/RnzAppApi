@@ -74,3 +74,14 @@ The server defaults to `http://localhost:4000`.
 - Set `MONGO_URI` in `.env` to your local or hosted MongoDB connection string.
 - `POST /api/logout` is stateless and expects the client to discard the JWT.
 - Loan updates and payment writes are persisted in MongoDB collections.
+
+## Vercel Deployment Notes
+
+- This repo includes `api/index.js` as the Vercel serverless entrypoint and `vercel.json` routes all paths to it.
+- In Vercel Project Settings -> Environment Variables, set:
+  - `MONGO_URI`
+  - `JWT_SECRET`
+  - `JWT_EXPIRES_IN`
+- For MongoDB Atlas, allow Vercel egress:
+  - Atlas -> Network Access -> add `0.0.0.0/0` for development/testing, or configure a stricter production network setup.
+- If your MongoDB password contains special characters, URL-encode it in `MONGO_URI`.
