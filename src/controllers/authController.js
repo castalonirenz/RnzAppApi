@@ -29,7 +29,7 @@ exports.logout = asyncHandler(async (req, res) => {
 });
 
 exports.getUser = asyncHandler(async (req, res) => {
-  const result = AuthService.getProfile(req.user.id);
+  const result = await AuthService.getProfile(req.user.id);
 
   res.json({
     success: true,

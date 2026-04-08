@@ -1,4 +1,3 @@
-const db = require('../config/database');
 const LoanModel = require('../models/loanModel');
 const PaymentModel = require('../models/paymentModel');
 const HistoryModel = require('../models/historyModel');
@@ -36,12 +35,13 @@ function formatLoan(loan) {
 }
 
 class LoanService {
-  static listLoans(userId) {
-    return LoanModel.findAllByUserId(userId).map(formatLoan);
+  static async listLoans(userId) {
+    const loans = await LoanModel.findAllByUserId(userId);
+    return loans.map(formatLoan);
   }
 
-  static getLoan(userId, loanId) {
-    const loan = LoanModel.findByIdAndUserId(loanId, userId);
+  static async getLoan(userId, loanId) {
+    const loan = await LoanModel.findByIdAndUserId(loanId, userId);
 
     if (!loan) {
       throw new HttpError(404, 'Loan not found.');
@@ -50,37 +50,33 @@ class LoanService {
     return formatLoan(loan);
   }
 
-  static createLoan(userId, payload) {
+  static async createLoan(userId, payload) {
     const principal = normalizeAmount(payload.principal);
     const interestRate = normalizeAmount(payload.interestRate);
     const durationMonths = Number(payload.durationMonths);
     const totalReceivable = calculateTotalReceivable(principal, Number(interestRate), durationMonths);
 
-    const transaction = db.transaction(() => {
-      const loan = LoanModel.create({
-        userId,
-        borrowerName: payload.borrowerName,
-        principal,
-        interestRate,
-        durationMonths,
-        totalReceivable,
-        status: 'Pending'
-      });
-
-      HistoryModel.create({
-        loanId: loan.id,
-        action: 'Loan created',
-        balanceAfter: totalReceivable
-      });
-
-      return loan;
+    const loan = await LoanModel.create({
+      userId,
+      borrowerName: payload.borrowerName,
+      principal,
+      interestRate,
+      durationMonths,
+      totalReceivable,
+      status: 'Pending'
     });
 
-    return formatLoan(transaction());
+    await HistoryModel.create({
+      loanId: loan.id,
+      action: 'Loan created',
+      balanceAfter: totalReceivable
+    });
+
+    return formatLoan(loan);
   }
 
-  static updateLoan(userId, loanId, payload) {
-    const currentLoan = LoanModel.findByIdAndUserId(loanId, userId);
+  static async updateLoan(userId, loanId, payload) {
+    const currentLoan = await LoanModel.findByIdAndUserId(loanId, userId);
 
     if (!currentLoan) {
       throw new HttpError(404, 'Loan not found.');
@@ -95,29 +91,25 @@ class LoanService {
     const durationMonths = Number(payload.durationMonths);
     const totalReceivable = calculateTotalReceivable(principal, Number(interestRate), durationMonths);
 
-    const transaction = db.transaction(() => {
-      const updatedLoan = LoanModel.updateById(loanId, userId, {
-        borrowerName: payload.borrowerName,
-        principal,
-        interestRate,
-        durationMonths,
-        totalReceivable
-      });
-
-      HistoryModel.create({
-        loanId,
-        action: 'Loan updated',
-        balanceAfter: totalReceivable
-      });
-
-      return updatedLoan;
+    const updatedLoan = await LoanModel.updateById(loanId, userId, {
+      borrowerName: payload.borrowerName,
+      principal,
+      interestRate,
+      durationMonths,
+      totalReceivable
     });
 
-    return formatLoan(transaction());
+    await HistoryModel.create({
+      loanId,
+      action: 'Loan updated',
+      balanceAfter: totalReceivable
+    });
+
+    return formatLoan(updatedLoan);
   }
 
-  static updateStatus(userId, loanId, status) {
-    const loan = LoanModel.findByIdAndUserId(loanId, userId);
+  static async updateStatus(userId, loanId, status) {
+    const loan = await LoanModel.findByIdAndUserId(loanId, userId);
 
     if (!loan) {
       throw new HttpError(404, 'Loan not found.');
@@ -138,23 +130,19 @@ class LoanService {
       return formatLoan(loan);
     }
 
-    const transaction = db.transaction(() => {
-      const updatedLoan = LoanModel.updateStatusById(loanId, userId, status);
+    const updatedLoan = await LoanModel.updateStatusById(loanId, userId, status);
 
-      HistoryModel.create({
-        loanId,
-        action: `Status changed to ${status}`,
-        balanceAfter: subtractAmounts(updatedLoan.total_receivable, updatedLoan.total_paid || '0.00')
-      });
-
-      return updatedLoan;
+    await HistoryModel.create({
+      loanId,
+      action: `Status changed to ${status}`,
+      balanceAfter: subtractAmounts(updatedLoan.total_receivable, updatedLoan.total_paid || '0.00')
     });
 
-    return formatLoan(transaction());
+    return formatLoan(updatedLoan);
   }
 
-  static deleteLoan(userId, loanId) {
-    const loan = LoanModel.findByIdAndUserId(loanId, userId);
+  static async deleteLoan(userId, loanId) {
+    const loan = await LoanModel.findByIdAndUserId(loanId, userId);
 
     if (!loan) {
       throw new HttpError(404, 'Loan not found.');
@@ -164,11 +152,11 @@ class LoanService {
       throw new HttpError(409, 'Only pending loans can be deleted.');
     }
 
-    LoanModel.deleteById(loanId, userId);
+    await LoanModel.deleteById(loanId, userId);
   }
 
-  static addPayment(userId, loanId, amount) {
-    const loan = LoanModel.findByIdAndUserId(loanId, userId);
+  static async addPayment(userId, loanId, amount) {
+    const loan = await LoanModel.findByIdAndUserId(loanId, userId);
 
     if (!loan) {
       throw new HttpError(404, 'Loan not found.');
@@ -188,40 +176,36 @@ class LoanService {
       throw new HttpError(422, 'Payment amount must be greater than zero.');
     }
 
-    const transaction = db.transaction(() => {
-      const payment = PaymentModel.create({
-        loanId,
-        amount: normalizedAmount
-      });
-
-      const refreshedLoan = LoanModel.findByIdAndUserId(loanId, userId);
-      const remainingBalance = subtractAmounts(refreshedLoan.total_receivable, refreshedLoan.total_paid || '0.00');
-      const nextStatus = toCents(remainingBalance) <= 0 ? 'Completed' : refreshedLoan.status;
-
-      if (nextStatus !== refreshedLoan.status) {
-        LoanModel.updateStatusById(loanId, userId, nextStatus);
-      }
-
-      HistoryModel.create({
-        loanId,
-        action: nextStatus === 'Completed' ? 'Payment received and loan completed' : 'Payment received',
-        amountPaid: normalizedAmount,
-        balanceAfter: remainingBalance
-      });
-
-      const finalLoan = LoanModel.findByIdAndUserId(loanId, userId);
-
-      return {
-        payment,
-        loan: formatLoan(finalLoan)
-      };
+    const payment = await PaymentModel.create({
+      loanId,
+      amount: normalizedAmount
     });
 
-    return transaction();
+    const refreshedLoan = await LoanModel.findByIdAndUserId(loanId, userId);
+    const remainingBalance = subtractAmounts(refreshedLoan.total_receivable, refreshedLoan.total_paid || '0.00');
+    const nextStatus = toCents(remainingBalance) <= 0 ? 'Completed' : refreshedLoan.status;
+
+    if (nextStatus !== refreshedLoan.status) {
+      await LoanModel.updateStatusById(loanId, userId, nextStatus);
+    }
+
+    await HistoryModel.create({
+      loanId,
+      action: nextStatus === 'Completed' ? 'Payment received and loan completed' : 'Payment received',
+      amountPaid: normalizedAmount,
+      balanceAfter: remainingBalance
+    });
+
+    const finalLoan = await LoanModel.findByIdAndUserId(loanId, userId);
+
+    return {
+      payment,
+      loan: formatLoan(finalLoan)
+    };
   }
 
-  static getLoanHistory(userId, loanId) {
-    const loan = LoanModel.findByIdAndUserId(loanId, userId);
+  static async getLoanHistory(userId, loanId) {
+    const loan = await LoanModel.findByIdAndUserId(loanId, userId);
 
     if (!loan) {
       throw new HttpError(404, 'Loan not found.');
@@ -229,13 +213,13 @@ class LoanService {
 
     return {
       loan: formatLoan(loan),
-      payments: PaymentModel.findByLoanId(loanId).map((payment) => ({
+      payments: (await PaymentModel.findByLoanId(loanId)).map((payment) => ({
         id: payment.id,
         loanId: payment.loan_id,
         amount: normalizeAmount(payment.amount),
         createdAt: payment.created_at
       })),
-      history: HistoryModel.findByLoanId(loanId).map((entry) => ({
+      history: (await HistoryModel.findByLoanId(loanId)).map((entry) => ({
         id: entry.id,
         loanId: entry.loan_id,
         action: entry.action,

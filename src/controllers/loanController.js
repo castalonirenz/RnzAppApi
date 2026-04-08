@@ -2,7 +2,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const LoanService = require('../services/loanService');
 
 exports.listLoans = asyncHandler(async (req, res) => {
-  const loans = LoanService.listLoans(req.user.id);
+  const loans = await LoanService.listLoans(req.user.id);
 
   res.json({
     success: true,
@@ -11,7 +11,7 @@ exports.listLoans = asyncHandler(async (req, res) => {
 });
 
 exports.createLoan = asyncHandler(async (req, res) => {
-  const loan = LoanService.createLoan(req.user.id, req.body);
+  const loan = await LoanService.createLoan(req.user.id, req.body);
 
   res.status(201).json({
     success: true,
@@ -21,7 +21,7 @@ exports.createLoan = asyncHandler(async (req, res) => {
 });
 
 exports.getLoan = asyncHandler(async (req, res) => {
-  const loan = LoanService.getLoan(req.user.id, Number(req.params.id));
+  const loan = await LoanService.getLoan(req.user.id, req.params.id);
 
   res.json({
     success: true,
@@ -30,7 +30,7 @@ exports.getLoan = asyncHandler(async (req, res) => {
 });
 
 exports.updateLoan = asyncHandler(async (req, res) => {
-  const loan = LoanService.updateLoan(req.user.id, Number(req.params.id), req.body);
+  const loan = await LoanService.updateLoan(req.user.id, req.params.id, req.body);
 
   res.json({
     success: true,
@@ -40,7 +40,7 @@ exports.updateLoan = asyncHandler(async (req, res) => {
 });
 
 exports.updateLoanStatus = asyncHandler(async (req, res) => {
-  const loan = LoanService.updateStatus(req.user.id, Number(req.params.id), req.body.status);
+  const loan = await LoanService.updateStatus(req.user.id, req.params.id, req.body.status);
 
   res.json({
     success: true,
@@ -50,13 +50,13 @@ exports.updateLoanStatus = asyncHandler(async (req, res) => {
 });
 
 exports.deleteLoan = asyncHandler(async (req, res) => {
-  LoanService.deleteLoan(req.user.id, Number(req.params.id));
+  await LoanService.deleteLoan(req.user.id, req.params.id);
 
   res.status(204).send();
 });
 
 exports.addPayment = asyncHandler(async (req, res) => {
-  const result = LoanService.addPayment(req.user.id, Number(req.params.id), req.body.amount);
+  const result = await LoanService.addPayment(req.user.id, req.params.id, req.body.amount);
 
   res.status(201).json({
     success: true,
@@ -66,7 +66,7 @@ exports.addPayment = asyncHandler(async (req, res) => {
 });
 
 exports.getLoanHistory = asyncHandler(async (req, res) => {
-  const result = LoanService.getLoanHistory(req.user.id, Number(req.params.id));
+  const result = await LoanService.getLoanHistory(req.user.id, req.params.id);
 
   res.json({
     success: true,

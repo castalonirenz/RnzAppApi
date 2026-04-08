@@ -2,10 +2,12 @@
 
 Node.js and Express backend for the My Borrower loan tracking application.
 
+Detailed endpoint documentation: [API_README.md](./API_README.md)
+
 ## Stack
 
 - Express
-- SQLite via `better-sqlite3`
+- MongoDB via `mongoose`
 - JWT authentication
 - MVC-style structure with controllers, models, routes, services, and middleware
 
@@ -15,7 +17,6 @@ Node.js and Express backend for the My Borrower loan tracking application.
 src/
   config/
   controllers/
-  database/
   middleware/
   models/
   routes/
@@ -70,6 +71,6 @@ The server defaults to `http://localhost:4000`.
 
 ## Notes
 
-- SQLite database file is created automatically under `data/`.
+- Set `MONGO_URI` in `.env` to your local or hosted MongoDB connection string.
 - `POST /api/logout` is stateless and expects the client to discard the JWT.
-- Loan updates and payment writes are wrapped in database transactions.
+- Loan updates and payment writes are persisted in MongoDB collections.

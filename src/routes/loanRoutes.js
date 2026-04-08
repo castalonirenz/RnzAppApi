@@ -21,7 +21,7 @@ router.post('/loans', loanValidationRules, validateRequest, loanController.creat
 
 router.get(
   '/loans/:id',
-  [param('id').isInt({ gt: 0 }).withMessage('Loan id must be a positive integer.')],
+  [param('id').isMongoId().withMessage('Loan id must be a valid Mongo ObjectId.')],
   validateRequest,
   loanController.getLoan
 );
@@ -29,7 +29,7 @@ router.get(
 router.put(
   '/loans/:id',
   [
-    param('id').isInt({ gt: 0 }).withMessage('Loan id must be a positive integer.'),
+    param('id').isMongoId().withMessage('Loan id must be a valid Mongo ObjectId.'),
     ...loanValidationRules
   ],
   validateRequest,
@@ -39,7 +39,7 @@ router.put(
 router.patch(
   '/loans/:id/status',
   [
-    param('id').isInt({ gt: 0 }).withMessage('Loan id must be a positive integer.'),
+    param('id').isMongoId().withMessage('Loan id must be a valid Mongo ObjectId.'),
     body('status')
       .isIn(['Pending', 'Ongoing', 'Completed'])
       .withMessage('Status must be Pending, Ongoing, or Completed.')
@@ -50,7 +50,7 @@ router.patch(
 
 router.delete(
   '/loans/:id',
-  [param('id').isInt({ gt: 0 }).withMessage('Loan id must be a positive integer.')],
+  [param('id').isMongoId().withMessage('Loan id must be a valid Mongo ObjectId.')],
   validateRequest,
   loanController.deleteLoan
 );
@@ -58,7 +58,7 @@ router.delete(
 router.post(
   '/loans/:id/payments',
   [
-    param('id').isInt({ gt: 0 }).withMessage('Loan id must be a positive integer.'),
+    param('id').isMongoId().withMessage('Loan id must be a valid Mongo ObjectId.'),
     body('amount').isFloat({ gt: 0 }).withMessage('Amount must be greater than zero.')
   ],
   validateRequest,
@@ -67,7 +67,7 @@ router.post(
 
 router.get(
   '/loans/:id/history',
-  [param('id').isInt({ gt: 0 }).withMessage('Loan id must be a positive integer.')],
+  [param('id').isMongoId().withMessage('Loan id must be a valid Mongo ObjectId.')],
   validateRequest,
   loanController.getLoanHistory
 );

@@ -1,16 +1,22 @@
-const fs = require('fs');
-const path = require('path');
-const Database = require('better-sqlite3');
+const mongoose = require('mongoose');
 const env = require('./env');
 
-const dataDir = path.dirname(env.dbPath);
+let isConnected = false;
 
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
+async function connectDatabase() {
+  if (isConnected) {
+    return mongoose.connection;
+  }
+
+  await mongoose.connect(env.mongoUri, {
+    autoIndex: true
+  });
+
+  isConnected = true;
+  return mongoose.connection;
 }
 
-const db = new Database(env.dbPath);
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
-
-module.exports = db;
+module.exports = {
+  mongoose,
+  connectDatabase
+};

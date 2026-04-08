@@ -3,7 +3,7 @@ const env = require('../config/env');
 const UserModel = require('../models/userModel');
 const HttpError = require('../utils/httpError');
 
-module.exports = function authMiddleware(req, res, next) {
+module.exports = async function authMiddleware(req, res, next) {
   const authorization = req.headers.authorization;
 
   if (!authorization || !authorization.startsWith('Bearer ')) {
@@ -14,7 +14,7 @@ module.exports = function authMiddleware(req, res, next) {
 
   try {
     const payload = jwt.verify(token, env.jwtSecret);
-    const user = UserModel.findById(payload.sub);
+    const user = await UserModel.findById(payload.sub);
 
     if (!user) {
       return next(new HttpError(401, 'Invalid authentication token.'));

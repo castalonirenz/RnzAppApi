@@ -7,14 +7,14 @@ const HttpError = require('../utils/httpError');
 
 class AuthService {
   static register = async ({ email, password }) => {
-    const existingUser = UserModel.findByEmail(email);
+    const existingUser = await UserModel.findByEmail(email);
 
     if (existingUser) {
       throw new HttpError(409, 'Email is already registered.');
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = UserModel.create({
+    const user = await UserModel.create({
       email,
       password: hashedPassword
     });
@@ -23,7 +23,7 @@ class AuthService {
   };
 
   static login = async ({ email, password }) => {
-    const user = UserModel.findByEmail(email);
+    const user = await UserModel.findByEmail(email);
 
     if (!user) {
       throw new HttpError(401, 'Invalid email or password.');
@@ -35,13 +35,13 @@ class AuthService {
       throw new HttpError(401, 'Invalid email or password.');
     }
 
-    const safeUser = UserModel.findById(user.id);
+    const safeUser = await UserModel.findById(user.id);
     return this.buildAuthResponse(safeUser);
   };
 
-  static getProfile(userId) {
-    const user = UserModel.findById(userId);
-    const summary = LoanModel.getDashboardSummary(userId) || {};
+  static async getProfile(userId) {
+    const user = await UserModel.findById(userId);
+    const summary = (await LoanModel.getDashboardSummary(userId)) || {};
     const totalReceivable = Number(summary.total_receivable || 0);
     const totalPaid = Number(summary.total_paid || 0);
 

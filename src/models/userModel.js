@@ -1,38 +1,66 @@
-const db = require('../config/database');
+const { mongoose } = require('../config/database');
+
+const userSchema = new mongoose.Schema(
+  {
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true
+    },
+    password: {
+      type: String,
+      required: true
+    }
+  },
+  {
+    timestamps: { createdAt: 'created_at', updatedAt: false }
+  }
+);
+
+const User = mongoose.models.User || mongoose.model('User', userSchema);
+
+function toUserDTO(userDoc, includePassword = false) {
+  if (!userDoc) {
+    return null;
+  }
+
+  const base = {
+    id: String(userDoc._id),
+    email: userDoc.email,
+    created_at: new Date(userDoc.created_at).toISOString()
+  };
+
+  if (includePassword) {
+    return {
+      ...base,
+      password: userDoc.password
+    };
+  }
+
+  return base;
+}
 
 class UserModel {
-  static create({ email, password }) {
-    const statement = db.prepare(`
-      INSERT INTO users (email, password)
-      VALUES (@email, @password)
-    `);
-
-    const result = statement.run({ email, password });
-    return this.findById(result.lastInsertRowid);
+  static async create({ email, password }) {
+    const user = await User.create({ email, password });
+    return toUserDTO(user);
   }
 
-  static findByEmail(email) {
-    return db.prepare(`
-      SELECT id, email, password, created_at
-      FROM users
-      WHERE email = ?
-    `).get(email);
+  static async findByEmail(email) {
+    const user = await User.findOne({ email: String(email).toLowerCase() }).lean();
+    return toUserDTO(user, true);
   }
 
-  static findById(id) {
-    return db.prepare(`
-      SELECT id, email, created_at
-      FROM users
-      WHERE id = ?
-    `).get(id);
+  static async findById(id) {
+    const user = await User.findById(id).lean();
+    return toUserDTO(user);
   }
 
-  static findByIdWithPassword(id) {
-    return db.prepare(`
-      SELECT id, email, password, created_at
-      FROM users
-      WHERE id = ?
-    `).get(id);
+  static async findByIdWithPassword(id) {
+    const user = await User.findById(id).lean();
+    return toUserDTO(user, true);
   }
 }
 

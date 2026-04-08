@@ -1,126 +1,138 @@
-const db = require('../config/database');
+const { mongoose } = require('../config/database');
+const PaymentModel = require('./paymentModel');
+
+const loanSchema = new mongoose.Schema(
+  {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true
+    },
+    borrowerName: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    principal: {
+      type: String,
+      required: true
+    },
+    interestRate: {
+      type: String,
+      required: true
+    },
+    durationMonths: {
+      type: Number,
+      required: true
+    },
+    totalReceivable: {
+      type: String,
+      required: true
+    },
+    status: {
+      type: String,
+      enum: ['Pending', 'Ongoing', 'Completed'],
+      default: 'Pending',
+      index: true
+    }
+  },
+  {
+    timestamps: { createdAt: 'createdAt', updatedAt: false }
+  }
+);
+
+const Loan = mongoose.models.Loan || mongoose.model('Loan', loanSchema);
+
+function toLoanDTO(loanDoc, totalPaid = '0.00') {
+  if (!loanDoc) {
+    return null;
+  }
+
+  return {
+    id: String(loanDoc._id),
+    user_id: String(loanDoc.userId),
+    borrower_name: loanDoc.borrowerName,
+    principal: loanDoc.principal,
+    interest_rate: loanDoc.interestRate,
+    duration_months: loanDoc.durationMonths,
+    total_receivable: loanDoc.totalReceivable,
+    status: loanDoc.status,
+    created_at: new Date(loanDoc.createdAt).toISOString(),
+    total_paid: totalPaid
+  };
+}
 
 class LoanModel {
-  static create(payload) {
-    const statement = db.prepare(`
-      INSERT INTO loans (
-        user_id,
-        borrower_name,
-        principal,
-        interest_rate,
-        duration_months,
-        total_receivable,
-        status
-      )
-      VALUES (
-        @userId,
-        @borrowerName,
-        @principal,
-        @interestRate,
-        @durationMonths,
-        @totalReceivable,
-        @status
-      )
-    `);
-
-    const result = statement.run(payload);
-    return this.findByIdAndUserId(result.lastInsertRowid, payload.userId);
+  static async create(payload) {
+    const loan = await Loan.create(payload);
+    return this.findByIdAndUserId(String(loan._id), String(payload.userId));
   }
 
-  static findAllByUserId(userId) {
-    return db.prepare(`
-      SELECT
-        l.id,
-        l.user_id,
-        l.borrower_name,
-        l.principal,
-        l.interest_rate,
-        l.duration_months,
-        l.total_receivable,
-        l.status,
-        l.created_at,
-        COALESCE(SUM(CAST(p.amount AS REAL)), 0) AS total_paid
-      FROM loans l
-      LEFT JOIN payments p ON p.loan_id = l.id
-      WHERE l.user_id = ?
-      GROUP BY l.id
-      ORDER BY datetime(l.created_at) DESC, l.id DESC
-    `).all(userId);
-  }
+  static async findAllByUserId(userId) {
+    const loans = await Loan.find({ userId }).sort({ createdAt: -1, _id: -1 }).lean();
+    const totals = await PaymentModel.getTotalPaidByLoanIds(loans.map((loan) => String(loan._id)));
 
-  static findByIdAndUserId(id, userId) {
-    return db.prepare(`
-      SELECT
-        l.id,
-        l.user_id,
-        l.borrower_name,
-        l.principal,
-        l.interest_rate,
-        l.duration_months,
-        l.total_receivable,
-        l.status,
-        l.created_at,
-        COALESCE(SUM(CAST(p.amount AS REAL)), 0) AS total_paid
-      FROM loans l
-      LEFT JOIN payments p ON p.loan_id = l.id
-      WHERE l.id = ? AND l.user_id = ?
-      GROUP BY l.id
-    `).get(id, userId);
-  }
-
-  static updateById(id, userId, payload) {
-    db.prepare(`
-      UPDATE loans
-      SET
-        borrower_name = @borrowerName,
-        principal = @principal,
-        interest_rate = @interestRate,
-        duration_months = @durationMonths,
-        total_receivable = @totalReceivable
-      WHERE id = @id AND user_id = @userId
-    `).run({
-      id,
-      userId,
-      ...payload
+    return loans.map((loan) => {
+      const totalPaid = totals.get(String(loan._id)) || '0.00';
+      return toLoanDTO(loan, totalPaid);
     });
+  }
+
+  static async findByIdAndUserId(id, userId) {
+    const loan = await Loan.findOne({ _id: id, userId }).lean();
+
+    if (!loan) {
+      return null;
+    }
+
+    const totalPaid = await PaymentModel.getTotalPaidByLoanId(String(loan._id));
+    return toLoanDTO(loan, totalPaid);
+  }
+
+  static async updateById(id, userId, payload) {
+    await Loan.findOneAndUpdate(
+      { _id: id, userId },
+      {
+        borrowerName: payload.borrowerName,
+        principal: payload.principal,
+        interestRate: payload.interestRate,
+        durationMonths: payload.durationMonths,
+        totalReceivable: payload.totalReceivable
+      }
+    );
 
     return this.findByIdAndUserId(id, userId);
   }
 
-  static updateStatusById(id, userId, status) {
-    db.prepare(`
-      UPDATE loans
-      SET status = ?
-      WHERE id = ? AND user_id = ?
-    `).run(status, id, userId);
-
+  static async updateStatusById(id, userId, status) {
+    await Loan.findOneAndUpdate({ _id: id, userId }, { status });
     return this.findByIdAndUserId(id, userId);
   }
 
-  static deleteById(id, userId) {
-    return db.prepare(`
-      DELETE FROM loans
-      WHERE id = ? AND user_id = ?
-    `).run(id, userId);
+  static async deleteById(id, userId) {
+    await Loan.findOneAndDelete({ _id: id, userId });
   }
 
-  static getDashboardSummary(userId) {
-    return db.prepare(`
-      SELECT
-        COUNT(*) AS total_loans,
-        SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END) AS pending_loans,
-        SUM(CASE WHEN status = 'Ongoing' THEN 1 ELSE 0 END) AS ongoing_loans,
-        SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) AS completed_loans,
-        COALESCE(SUM(CAST(total_receivable AS REAL)), 0) AS total_receivable,
-        COALESCE((
-          SELECT SUM(CAST(p.amount AS REAL))
-          FROM payments p
-          INNER JOIN loans pl ON pl.id = p.loan_id
-          WHERE pl.user_id = ?
-        ), 0) AS total_paid
-      FROM loans
-      WHERE user_id = ?
-    `).get(userId, userId);
+  static async getDashboardSummary(userId) {
+    const loans = await Loan.find({ userId }).select('status totalReceivable').lean();
+
+    const totalLoans = loans.length;
+    const pendingLoans = loans.filter((loan) => loan.status === 'Pending').length;
+    const ongoingLoans = loans.filter((loan) => loan.status === 'Ongoing').length;
+    const completedLoans = loans.filter((loan) => loan.status === 'Completed').length;
+    const totalReceivable = loans.reduce((sum, loan) => sum + Number(loan.totalReceivable), 0);
+
+    const totalPaid = await PaymentModel.getTotalPaidByUserId(userId);
+
+    return {
+      total_loans: totalLoans,
+      pending_loans: pendingLoans,
+      ongoing_loans: ongoingLoans,
+      completed_loans: completedLoans,
+      total_receivable: totalReceivable,
+      total_paid: Number(totalPaid)
+    };
   }
 }
 
