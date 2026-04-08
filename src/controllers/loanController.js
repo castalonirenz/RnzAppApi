@@ -56,7 +56,12 @@ exports.deleteLoan = asyncHandler(async (req, res) => {
 });
 
 exports.addPayment = asyncHandler(async (req, res) => {
-  const result = await LoanService.addPayment(req.user.id, req.params.id, req.body.amount);
+  const result = await LoanService.addPayment(
+    req.user.id,
+    req.params.id,
+    req.body.amount,
+    req.body.paid_at
+  );
 
   res.status(201).json({
     success: true,
@@ -70,6 +75,6 @@ exports.getLoanHistory = asyncHandler(async (req, res) => {
 
   res.json({
     success: true,
-    data: result
+    data: result.history
   });
 });

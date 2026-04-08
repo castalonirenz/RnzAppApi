@@ -11,6 +11,10 @@ const paymentSchema = new mongoose.Schema(
     amount: {
       type: String,
       required: true
+    },
+    paidAt: {
+      type: Date,
+      default: null
     }
   },
   {
@@ -29,13 +33,14 @@ function toPaymentDTO(paymentDoc) {
     id: String(paymentDoc._id),
     loan_id: String(paymentDoc.loanId),
     amount: paymentDoc.amount,
+    paid_at: paymentDoc.paidAt ? new Date(paymentDoc.paidAt).toISOString() : null,
     created_at: new Date(paymentDoc.createdAt).toISOString()
   };
 }
 
 class PaymentModel {
-  static async create({ loanId, amount }) {
-    const payment = await Payment.create({ loanId, amount });
+  static async create({ loanId, amount, paidAt = null }) {
+    const payment = await Payment.create({ loanId, amount, paidAt });
     return toPaymentDTO(payment);
   }
 

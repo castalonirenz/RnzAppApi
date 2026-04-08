@@ -14,6 +14,16 @@ const loanSchema = new mongoose.Schema(
       required: true,
       trim: true
     },
+    borrowerContact: {
+      type: String,
+      default: '',
+      trim: true
+    },
+    borrowerAddress: {
+      type: String,
+      default: '',
+      trim: true
+    },
     principal: {
       type: String,
       required: true
@@ -24,7 +34,7 @@ const loanSchema = new mongoose.Schema(
     },
     interestType: {
       type: String,
-      enum: ['monthly', 'annum'],
+      enum: ['monthly', 'annum', 'month', 'year'],
       default: 'monthly',
       required: true
     },
@@ -38,8 +48,8 @@ const loanSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['Pending', 'Ongoing', 'Completed'],
-      default: 'Pending',
+      enum: ['pending', 'ongoing', 'completed', 'Pending', 'Ongoing', 'Completed'],
+      default: 'pending',
       index: true
     }
   },
@@ -59,14 +69,20 @@ function toLoanDTO(loanDoc, totalPaid = '0.00') {
     id: String(loanDoc._id),
     user_id: String(loanDoc.userId),
     borrower_name: loanDoc.borrowerName,
+    borrower_contact: loanDoc.borrowerContact || '',
+    borrower_address: loanDoc.borrowerAddress || '',
     principal: loanDoc.principal,
     interest_rate: loanDoc.interestRate,
-    interest_type: loanDoc.interestType || 'monthly',
+    interest_period:
+      String(loanDoc.interestType || 'monthly').toLowerCase() === 'annum' ||
+      String(loanDoc.interestType || 'monthly').toLowerCase() === 'year'
+        ? 'year'
+        : 'month',
     duration_months: loanDoc.durationMonths,
     total_receivable: loanDoc.totalReceivable,
-    status: loanDoc.status,
+    status: String(loanDoc.status || 'pending').toLowerCase(),
     created_at: new Date(loanDoc.createdAt).toISOString(),
-    total_paid: totalPaid
+    total_payments: totalPaid
   };
 }
 
@@ -102,6 +118,8 @@ class LoanModel {
       { _id: id, userId },
       {
         borrowerName: payload.borrowerName,
+        borrowerContact: payload.borrowerContact,
+        borrowerAddress: payload.borrowerAddress,
         principal: payload.principal,
         interestRate: payload.interestRate,
         interestType: payload.interestType,
@@ -124,12 +142,16 @@ class LoanModel {
 
   static async getDashboardSummary(userId) {
     const loans = await Loan.find({ userId }).select('status totalReceivable').lean();
+    const normalized = loans.map((loan) => ({
+      ...loan,
+      status: String(loan.status || '').toLowerCase()
+    }));
 
-    const totalLoans = loans.length;
-    const pendingLoans = loans.filter((loan) => loan.status === 'Pending').length;
-    const ongoingLoans = loans.filter((loan) => loan.status === 'Ongoing').length;
-    const completedLoans = loans.filter((loan) => loan.status === 'Completed').length;
-    const totalReceivable = loans.reduce((sum, loan) => sum + Number(loan.totalReceivable), 0);
+    const totalLoans = normalized.length;
+    const pendingLoans = normalized.filter((loan) => loan.status === 'pending').length;
+    const ongoingLoans = normalized.filter((loan) => loan.status === 'ongoing').length;
+    const completedLoans = normalized.filter((loan) => loan.status === 'completed').length;
+    const totalReceivable = normalized.reduce((sum, loan) => sum + Number(loan.totalReceivable), 0);
 
     const totalPaid = await PaymentModel.getTotalPaidByUserId(userId);
 

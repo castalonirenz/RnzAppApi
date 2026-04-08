@@ -9,29 +9,40 @@ const {
   toCents
 } = require('../utils/decimal');
 
-const STATUS_FLOW = ['Pending', 'Ongoing', 'Completed'];
+const STATUS_FLOW = ['pending', 'ongoing', 'completed'];
+
+function normalizeStatus(value) {
+  return String(value || '').toLowerCase();
+}
+
+function toInterestType(value) {
+  const type = String(value || 'month').toLowerCase();
+  return type === 'year' || type === 'annum' ? 'annum' : 'monthly';
+}
 
 function formatLoan(loan) {
   if (!loan) {
     return null;
   }
 
-  const totalPaid = Number(loan.total_paid || 0).toFixed(2);
+  const totalPaid = Number(loan.total_payments || 0).toFixed(2);
   const remainingBalance = subtractAmounts(loan.total_receivable, totalPaid);
 
   return {
     id: loan.id,
-    userId: loan.user_id,
-    borrowerName: loan.borrower_name,
+    user_id: loan.user_id,
+    borrower_name: loan.borrower_name,
+    borrower_contact: loan.borrower_contact || '',
+    borrower_address: loan.borrower_address || '',
     principal: normalizeAmount(loan.principal),
-    interestRate: normalizeAmount(loan.interest_rate),
-    interestType: loan.interest_type || 'monthly',
-    durationMonths: loan.duration_months,
-    totalReceivable: normalizeAmount(loan.total_receivable),
-    totalPaid,
-    remainingBalance,
-    status: loan.status,
-    createdAt: loan.created_at
+    interest_rate: normalizeAmount(loan.interest_rate),
+    interest_period: loan.interest_period || 'month',
+    duration_months: loan.duration_months,
+    total_receivable: normalizeAmount(loan.total_receivable),
+    total_payments: totalPaid,
+    remaining_balance: remainingBalance,
+    status: normalizeStatus(loan.status),
+    created_at: loan.created_at
   };
 }
 
@@ -53,9 +64,9 @@ class LoanService {
 
   static async createLoan(userId, payload) {
     const principal = normalizeAmount(payload.principal);
-    const interestRate = normalizeAmount(payload.interestRate);
-    const interestType = String(payload.interestType || 'monthly').toLowerCase();
-    const durationMonths = Number(payload.durationMonths);
+    const interestRate = normalizeAmount(payload.interest_rate);
+    const interestType = toInterestType(payload.interest_period);
+    const durationMonths = Number(payload.duration_months);
     const totalReceivable = calculateTotalReceivable(
       principal,
       Number(interestRate),
@@ -65,13 +76,15 @@ class LoanService {
 
     const loan = await LoanModel.create({
       userId,
-      borrowerName: payload.borrowerName,
+      borrowerName: payload.borrower_name,
+      borrowerContact: payload.borrower_contact || '',
+      borrowerAddress: payload.borrower_address || '',
       principal,
       interestRate,
       interestType,
       durationMonths,
       totalReceivable,
-      status: 'Pending'
+      status: 'pending'
     });
 
     await HistoryModel.create({
@@ -90,14 +103,14 @@ class LoanService {
       throw new HttpError(404, 'Loan not found.');
     }
 
-    if (currentLoan.status !== 'Pending') {
+    if (normalizeStatus(currentLoan.status) !== 'pending') {
       throw new HttpError(409, 'Only pending loans can be edited.');
     }
 
     const principal = normalizeAmount(payload.principal);
-    const interestRate = normalizeAmount(payload.interestRate);
-    const interestType = String(payload.interestType || 'monthly').toLowerCase();
-    const durationMonths = Number(payload.durationMonths);
+    const interestRate = normalizeAmount(payload.interest_rate);
+    const interestType = toInterestType(payload.interest_period);
+    const durationMonths = Number(payload.duration_months);
     const totalReceivable = calculateTotalReceivable(
       principal,
       Number(interestRate),
@@ -106,7 +119,9 @@ class LoanService {
     );
 
     const updatedLoan = await LoanModel.updateById(loanId, userId, {
-      borrowerName: payload.borrowerName,
+      borrowerName: payload.borrower_name,
+      borrowerContact: payload.borrower_contact || '',
+      borrowerAddress: payload.borrower_address || '',
       principal,
       interestRate,
       interestType,
@@ -130,8 +145,10 @@ class LoanService {
       throw new HttpError(404, 'Loan not found.');
     }
 
-    const currentIndex = STATUS_FLOW.indexOf(loan.status);
-    const nextIndex = STATUS_FLOW.indexOf(status);
+    const normalizedCurrentStatus = normalizeStatus(loan.status);
+    const normalizedNextStatus = normalizeStatus(status);
+    const currentIndex = STATUS_FLOW.indexOf(normalizedCurrentStatus);
+    const nextIndex = STATUS_FLOW.indexOf(normalizedNextStatus);
 
     if (nextIndex === -1) {
       throw new HttpError(422, 'Invalid loan status.');
@@ -145,12 +162,13 @@ class LoanService {
       return formatLoan(loan);
     }
 
-    const updatedLoan = await LoanModel.updateStatusById(loanId, userId, status);
+    const updatedLoan = await LoanModel.updateStatusById(loanId, userId, normalizedNextStatus);
 
     await HistoryModel.create({
       loanId,
-      action: `Status changed to ${status}`,
-      balanceAfter: subtractAmounts(updatedLoan.total_receivable, updatedLoan.total_paid || '0.00')
+      action: 'status',
+      amountPaid: null,
+      balanceAfter: subtractAmounts(updatedLoan.total_receivable, updatedLoan.total_payments || '0.00')
     });
 
     return formatLoan(updatedLoan);
@@ -163,25 +181,25 @@ class LoanService {
       throw new HttpError(404, 'Loan not found.');
     }
 
-    if (loan.status !== 'Pending') {
+    if (normalizeStatus(loan.status) !== 'pending') {
       throw new HttpError(409, 'Only pending loans can be deleted.');
     }
 
     await LoanModel.deleteById(loanId, userId);
   }
 
-  static async addPayment(userId, loanId, amount) {
+  static async addPayment(userId, loanId, amount, paidAt) {
     const loan = await LoanModel.findByIdAndUserId(loanId, userId);
 
     if (!loan) {
       throw new HttpError(404, 'Loan not found.');
     }
 
-    if (loan.status === 'Pending') {
+    if (normalizeStatus(loan.status) === 'pending') {
       throw new HttpError(409, 'Loan must be marked as ongoing before adding payments.');
     }
 
-    if (loan.status === 'Completed') {
+    if (normalizeStatus(loan.status) === 'completed') {
       throw new HttpError(409, 'Completed loans cannot receive more payments.');
     }
 
@@ -193,20 +211,25 @@ class LoanService {
 
     const payment = await PaymentModel.create({
       loanId,
-      amount: normalizedAmount
+      amount: normalizedAmount,
+      paidAt: paidAt || null
     });
 
     const refreshedLoan = await LoanModel.findByIdAndUserId(loanId, userId);
-    const remainingBalance = subtractAmounts(refreshedLoan.total_receivable, refreshedLoan.total_paid || '0.00');
-    const nextStatus = toCents(remainingBalance) <= 0 ? 'Completed' : refreshedLoan.status;
+    const remainingBalance = subtractAmounts(
+      refreshedLoan.total_receivable,
+      refreshedLoan.total_payments || '0.00'
+    );
+    const currentStatus = normalizeStatus(refreshedLoan.status);
+    const nextStatus = toCents(remainingBalance) <= 0 ? 'completed' : currentStatus;
 
-    if (nextStatus !== refreshedLoan.status) {
+    if (nextStatus !== currentStatus) {
       await LoanModel.updateStatusById(loanId, userId, nextStatus);
     }
 
     await HistoryModel.create({
       loanId,
-      action: nextStatus === 'Completed' ? 'Payment received and loan completed' : 'Payment received',
+      action: 'payment',
       amountPaid: normalizedAmount,
       balanceAfter: remainingBalance
     });
@@ -230,17 +253,22 @@ class LoanService {
       loan: formatLoan(loan),
       payments: (await PaymentModel.findByLoanId(loanId)).map((payment) => ({
         id: payment.id,
-        loanId: payment.loan_id,
+        loan_id: payment.loan_id,
         amount: normalizeAmount(payment.amount),
-        createdAt: payment.created_at
+        paid_at: payment.paid_at || payment.created_at,
+        created_at: payment.created_at
       })),
       history: (await HistoryModel.findByLoanId(loanId)).map((entry) => ({
         id: entry.id,
-        loanId: entry.loan_id,
+        loan_id: entry.loan_id,
         action: entry.action,
-        amountPaid: entry.amount_paid ? normalizeAmount(entry.amount_paid) : null,
-        balanceAfter: entry.balance_after ? normalizeAmount(entry.balance_after) : null,
-        createdAt: entry.created_at
+        details:
+          entry.action === 'payment'
+            ? `Payment recorded at ${entry.created_at}`
+            : `Loan ${entry.action} at ${entry.created_at}`,
+        amount_paid: entry.amount_paid ? normalizeAmount(entry.amount_paid) : null,
+        balance_after: entry.balance_after ? normalizeAmount(entry.balance_after) : null,
+        created_at: entry.created_at
       }))
     };
   }
