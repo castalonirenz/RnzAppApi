@@ -6,12 +6,19 @@ dotenv.config({
   override: false
 });
 
+const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI || '';
+const nodeEnv = process.env.NODE_ENV || 'development';
+
+if (!mongoUri && nodeEnv === 'production') {
+  throw new Error('Missing MongoDB connection string. Set MONGO_URI (or MONGODB_URI) in your environment variables.');
+}
+
 module.exports = {
   port: Number(process.env.PORT) || 4000,
-  nodeEnv: process.env.NODE_ENV || 'development',
+  nodeEnv,
   jwtSecret: process.env.JWT_SECRET || 'change-this-secret',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
-  mongoUri: process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/myborrower',
+  mongoUri: mongoUri || 'mongodb://127.0.0.1:27017/myborrower',
   corsOrigins: (process.env.CORS_ORIGINS || '*')
     .split(',')
     .map((origin) => origin.trim())
