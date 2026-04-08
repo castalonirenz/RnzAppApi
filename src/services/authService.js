@@ -6,7 +6,7 @@ const LoanModel = require('../models/loanModel');
 const HttpError = require('../utils/httpError');
 
 class AuthService {
-  static register = async ({ email, password }) => {
+  static register = async ({ name, email, password }) => {
     const existingUser = await UserModel.findByEmail(email);
 
     if (existingUser) {
@@ -15,6 +15,7 @@ class AuthService {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await UserModel.create({
+      name,
       email,
       password: hashedPassword
     });

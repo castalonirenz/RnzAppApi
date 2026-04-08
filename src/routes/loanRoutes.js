@@ -7,14 +7,16 @@ const validateRequest = require('../middleware/validateRequest');
 const router = express.Router();
 
 const loanValidationRules = [
-  body('borrowerName').trim().notEmpty().withMessage('Borrower name is required.'),
+  body('borrower_name').trim().notEmpty().withMessage('Borrower name is required.'),
+  body('borrower_contact').optional().isString().withMessage('Borrower contact must be text.'),
+  body('borrower_address').optional().isString().withMessage('Borrower address must be text.'),
   body('principal').isFloat({ gt: 0 }).withMessage('Principal must be greater than zero.'),
-  body('interestRate').isFloat({ min: 0 }).withMessage('Interest rate must be zero or greater.'),
-  body('interestType')
+  body('interest_rate').isFloat({ min: 0 }).withMessage('Interest rate must be zero or greater.'),
+  body('interest_period')
     .optional()
-    .isIn(['monthly', 'annum'])
-    .withMessage('Interest type must be monthly or annum.'),
-  body('durationMonths').isInt({ gt: 0 }).withMessage('Duration must be a positive integer.')
+    .isIn(['month', 'year', 'monthly', 'annum'])
+    .withMessage('Interest period must be month or year.'),
+  body('duration_months').isInt({ gt: 0 }).withMessage('Duration must be a positive integer.')
 ];
 
 router.use(authMiddleware);
@@ -45,8 +47,8 @@ router.patch(
   [
     param('id').isMongoId().withMessage('Loan id must be a valid Mongo ObjectId.'),
     body('status')
-      .isIn(['Pending', 'Ongoing', 'Completed'])
-      .withMessage('Status must be Pending, Ongoing, or Completed.')
+      .isIn(['pending', 'ongoing', 'completed'])
+      .withMessage('Status must be pending, ongoing, or completed.')
   ],
   validateRequest,
   loanController.updateLoanStatus
@@ -63,7 +65,8 @@ router.post(
   '/loans/:id/payments',
   [
     param('id').isMongoId().withMessage('Loan id must be a valid Mongo ObjectId.'),
-    body('amount').isFloat({ gt: 0 }).withMessage('Amount must be greater than zero.')
+    body('amount').isFloat({ gt: 0 }).withMessage('Amount must be greater than zero.'),
+    body('paid_at').optional().isISO8601().withMessage('paid_at must be a valid ISO date.')
   ],
   validateRequest,
   loanController.addPayment

@@ -28,7 +28,13 @@ function calculateTotalReceivable(principal, interestRate, durationMonths, inter
   const principalCents = toCents(principal);
   const rate = Number(interestRate);
   const duration = Number(durationMonths);
-  const type = String(interestType || 'monthly').toLowerCase();
+  const rawType = String(interestType || 'monthly').toLowerCase();
+  const type =
+    rawType === 'month' || rawType === 'monthly'
+      ? 'monthly'
+      : rawType === 'year' || rawType === 'annum'
+        ? 'annum'
+        : rawType;
 
   if (!Number.isFinite(rate) || !Number.isFinite(duration)) {
     throw new Error('Invalid interest rate or duration.');

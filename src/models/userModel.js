@@ -2,6 +2,11 @@ const { mongoose } = require('../config/database');
 
 const userSchema = new mongoose.Schema(
   {
+    name: {
+      type: String,
+      required: true,
+      trim: true
+    },
     email: {
       type: String,
       required: true,
@@ -28,6 +33,7 @@ function toUserDTO(userDoc, includePassword = false) {
 
   const base = {
     id: String(userDoc._id),
+    name: userDoc.name,
     email: userDoc.email,
     created_at: new Date(userDoc.created_at).toISOString()
   };
@@ -43,8 +49,8 @@ function toUserDTO(userDoc, includePassword = false) {
 }
 
 class UserModel {
-  static async create({ email, password }) {
-    const user = await User.create({ email, password });
+  static async create({ name, email, password }) {
+    const user = await User.create({ name, email, password });
     return toUserDTO(user);
   }
 
