@@ -40,7 +40,7 @@ exports.updateLoan = asyncHandler(async (req, res) => {
 });
 
 exports.updateLoanStatus = asyncHandler(async (req, res) => {
-  const loan = await LoanService.updateStatus(req.user.id, req.params.id, req.body.status);
+  const loan = await LoanService.updateStatus(req.user.id, req.params.id, req.body.status, req.body.releaseDate);
 
   res.json({
     success: true,

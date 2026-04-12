@@ -107,6 +107,8 @@ class LoanService {
       throw new HttpError(409, 'Only pending loans can be edited.');
     }
 
+   
+
     const principal = normalizeAmount(payload.principal);
     const interestRate = normalizeAmount(payload.interest_rate);
     const interestType = toInterestType(payload.interest_period);
@@ -138,11 +140,14 @@ class LoanService {
     return formatLoan(updatedLoan);
   }
 
-  static async updateStatus(userId, loanId, status) {
+  static async updateStatus(userId, loanId, status, releaseDate) {
     const loan = await LoanModel.findByIdAndUserId(loanId, userId);
 
     if (!loan) {
       throw new HttpError(404, 'Loan not found.');
+    }
+     if(releaseDate == "" || releaseDate == null || releaseDate == undefined){
+       throw new HttpError(409, releaseDate);
     }
 
     const normalizedCurrentStatus = normalizeStatus(loan.status);
@@ -162,7 +167,7 @@ class LoanService {
       return formatLoan(loan);
     }
 
-    const updatedLoan = await LoanModel.updateStatusById(loanId, userId, normalizedNextStatus);
+    const updatedLoan = await LoanModel.updateStatusById(loanId, userId, normalizedNextStatus, releaseDate);
 
     await HistoryModel.create({
       loanId,
