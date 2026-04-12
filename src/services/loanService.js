@@ -164,11 +164,11 @@ class LoanService {
       throw new HttpError(409, 'Loan status cannot move backwards.');
     }
 
-    if (nextIndex === currentIndex) {
-      return formatLoan(loan);
-    }
-
     const updatedLoan = await LoanModel.updateStatusById(loanId, userId, normalizedNextStatus, releaseDate);
+
+    if (nextIndex === currentIndex) {
+      return formatLoan(updatedLoan);
+    }
 
     await HistoryModel.create({
       loanId,
