@@ -103,7 +103,7 @@ class LoanService {
       throw new HttpError(404, 'Loan not found.');
     }
 
-    if (normalizeStatus(currentLoan.status) !== 'pending') {
+    if (normalizeStatus(currentLoan.status) !== 'pending' && normalizeStatus(currentLoan.status) !== 'ongoing') {
       throw new HttpError(409, 'Only pending loans can be edited.');
     }
 
