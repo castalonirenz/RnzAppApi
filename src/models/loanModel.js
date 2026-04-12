@@ -46,6 +46,10 @@ const loanSchema = new mongoose.Schema(
       type: String,
       required: true
     },
+    releaseDate: {
+      type: Date,
+      required: false
+    },
     status: {
       type: String,
       enum: ['pending', 'ongoing', 'completed', 'Pending', 'Ongoing', 'Completed'],
@@ -75,12 +79,13 @@ function toLoanDTO(loanDoc, totalPaid = '0.00') {
     interest_rate: loanDoc.interestRate,
     interest_period:
       String(loanDoc.interestType || 'monthly').toLowerCase() === 'annum' ||
-      String(loanDoc.interestType || 'monthly').toLowerCase() === 'year'
+        String(loanDoc.interestType || 'monthly').toLowerCase() === 'year'
         ? 'year'
         : 'month',
     duration_months: loanDoc.durationMonths,
     total_receivable: loanDoc.totalReceivable,
     status: String(loanDoc.status || 'pending').toLowerCase(),
+    release_date: loanDoc.releaseDate ? new Date(loanDoc.releaseDate).toISOString() : null,
     created_at: new Date(loanDoc.createdAt).toISOString(),
     total_payments: totalPaid
   };
@@ -131,8 +136,8 @@ class LoanModel {
     return this.findByIdAndUserId(id, userId);
   }
 
-  static async updateStatusById(id, userId, status) {
-    await Loan.findOneAndUpdate({ _id: id, userId }, { status });
+  static async updateStatusById(id, userId, status, releaseDate) {
+    await Loan.findOneAndUpdate({ _id: id, userId }, { status, releaseDate });
     return this.findByIdAndUserId(id, userId);
   }
 

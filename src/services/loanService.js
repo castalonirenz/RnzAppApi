@@ -42,6 +42,7 @@ function formatLoan(loan) {
     total_payments: totalPaid,
     remaining_balance: remainingBalance,
     status: normalizeStatus(loan.status),
+    release_date: loan.release_date || null,
     created_at: loan.created_at
   };
 }
@@ -107,6 +108,8 @@ class LoanService {
       throw new HttpError(409, 'Only pending loans can be edited.');
     }
 
+   
+
     const principal = normalizeAmount(payload.principal);
     const interestRate = normalizeAmount(payload.interest_rate);
     const interestType = toInterestType(payload.interest_period);
@@ -138,11 +141,14 @@ class LoanService {
     return formatLoan(updatedLoan);
   }
 
-  static async updateStatus(userId, loanId, status) {
+  static async updateStatus(userId, loanId, status, releaseDate) {
     const loan = await LoanModel.findByIdAndUserId(loanId, userId);
 
     if (!loan) {
       throw new HttpError(404, 'Loan not found.');
+    }
+     if(releaseDate == "" || releaseDate == null || releaseDate == undefined){
+       throw new HttpError(409, 'Release date is required.');
     }
 
     const normalizedCurrentStatus = normalizeStatus(loan.status);
@@ -158,11 +164,11 @@ class LoanService {
       throw new HttpError(409, 'Loan status cannot move backwards.');
     }
 
-    if (nextIndex === currentIndex) {
-      return formatLoan(loan);
-    }
+    const updatedLoan = await LoanModel.updateStatusById(loanId, userId, normalizedNextStatus, releaseDate);
 
-    const updatedLoan = await LoanModel.updateStatusById(loanId, userId, normalizedNextStatus);
+    if (nextIndex === currentIndex) {
+      return formatLoan(updatedLoan);
+    }
 
     await HistoryModel.create({
       loanId,
