@@ -85,6 +85,7 @@ function toLoanDTO(loanDoc, totalPaid = '0.00') {
     duration_months: loanDoc.durationMonths,
     total_receivable: loanDoc.totalReceivable,
     status: String(loanDoc.status || 'pending').toLowerCase(),
+    release_date: loanDoc.releaseDate ? new Date(loanDoc.releaseDate).toISOString() : null,
     created_at: new Date(loanDoc.createdAt).toISOString(),
     total_payments: totalPaid
   };

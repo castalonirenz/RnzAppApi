@@ -42,6 +42,7 @@ function formatLoan(loan) {
     total_payments: totalPaid,
     remaining_balance: remainingBalance,
     status: normalizeStatus(loan.status),
+    release_date: loan.release_date || null,
     created_at: loan.created_at
   };
 }
@@ -147,7 +148,7 @@ class LoanService {
       throw new HttpError(404, 'Loan not found.');
     }
      if(releaseDate == "" || releaseDate == null || releaseDate == undefined){
-       throw new HttpError(409, releaseDate);
+       throw new HttpError(409, 'Release date is required.');
     }
 
     const normalizedCurrentStatus = normalizeStatus(loan.status);
