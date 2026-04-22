@@ -27,6 +27,12 @@ const expenseSchema = new mongoose.Schema(
       default: '',
       trim: true
     },
+    budgetId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Budget',
+      default: null,
+      index: true
+    },
     expenseDate: {
       type: Date,
       required: true
@@ -51,6 +57,7 @@ function toExpenseDTO(expenseDoc) {
     amount: Number(expenseDoc.amount),
     category: expenseDoc.category || '',
     notes: expenseDoc.notes || '',
+    budget_id: expenseDoc.budgetId ? String(expenseDoc.budgetId) : null,
     expense_date: new Date(expenseDoc.expenseDate).toISOString(),
     created_at: new Date(expenseDoc.createdAt).toISOString(),
     updated_at: new Date(expenseDoc.updatedAt).toISOString()
@@ -63,13 +70,14 @@ class ExpenseModel {
     return expenses.map(toExpenseDTO);
   }
 
-  static async create({ userId, title, amount, category, notes, expenseDate }) {
+  static async create({ userId, title, amount, category, notes, expenseDate, budgetId = null }) {
     const expense = await Expense.create({
       userId,
       title,
       amount,
       category,
       notes,
+      budgetId,
       expenseDate
     });
 
@@ -79,6 +87,22 @@ class ExpenseModel {
   static async findByIdAndUserId(id, userId) {
     const expense = await Expense.findOne({ _id: id, userId }).lean();
     return toExpenseDTO(expense);
+  }
+
+  static async updateByIdAndUserId(id, userId, payload) {
+    await Expense.findOneAndUpdate(
+      { _id: id, userId },
+      {
+        title: payload.title,
+        amount: payload.amount,
+        category: payload.category,
+        notes: payload.notes,
+        budgetId: payload.budgetId,
+        expenseDate: payload.expenseDate
+      }
+    );
+
+    return this.findByIdAndUserId(id, userId);
   }
 
   static async deleteByIdAndUserId(id, userId) {
