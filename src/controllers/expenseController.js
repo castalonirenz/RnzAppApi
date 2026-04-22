@@ -15,6 +15,15 @@ exports.createExpense = asyncHandler(async (req, res) => {
   });
 });
 
+exports.updateExpense = asyncHandler(async (req, res) => {
+  const expense = await ExpenseService.updateExpense(req.user.id, req.params.id, req.body);
+  res.json({
+    success: true,
+    message: 'Expense updated successfully.',
+    data: expense
+  });
+});
+
 exports.deleteExpense = asyncHandler(async (req, res) => {
   await ExpenseService.deleteExpense(req.user.id, req.params.id);
   res.status(204).send();
