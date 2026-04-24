@@ -4,6 +4,7 @@ const HistoryModel = require('../models/historyModel');
 const HttpError = require('../utils/httpError');
 const {
   normalizeAmount,
+  normalizeRate,
   calculateTotalReceivable,
   subtractAmounts,
   toCents
@@ -35,7 +36,7 @@ function formatLoan(loan) {
     borrower_contact: loan.borrower_contact || '',
     borrower_address: loan.borrower_address || '',
     principal: normalizeAmount(loan.principal),
-    interest_rate: normalizeAmount(loan.interest_rate),
+    interest_rate: normalizeRate(loan.interest_rate),
     interest_period: loan.interest_period || 'month',
     duration_months: loan.duration_months,
     total_receivable: normalizeAmount(loan.total_receivable),
@@ -65,7 +66,7 @@ class LoanService {
 
   static async createLoan(userId, payload) {
     const principal = normalizeAmount(payload.principal);
-    const interestRate = normalizeAmount(payload.interest_rate);
+    const interestRate = normalizeRate(payload.interest_rate);
     const interestType = toInterestType(payload.interest_period);
     const durationMonths = Number(payload.duration_months);
     const totalReceivable = calculateTotalReceivable(
@@ -111,7 +112,7 @@ class LoanService {
    
 
     const principal = normalizeAmount(payload.principal);
-    const interestRate = normalizeAmount(payload.interest_rate);
+    const interestRate = normalizeRate(payload.interest_rate);
     const interestType = toInterestType(payload.interest_period);
     const durationMonths = Number(payload.duration_months);
     const totalReceivable = calculateTotalReceivable(
