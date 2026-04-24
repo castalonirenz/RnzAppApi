@@ -8,6 +8,21 @@ function normalizeAmount(value) {
   return (Math.round(numericValue * 100) / 100).toFixed(2);
 }
 
+function normalizeRate(value, maxDecimals = 6) {
+  const numericValue = Number(value);
+
+  if (!Number.isFinite(numericValue)) {
+    throw new Error('Invalid numeric value.');
+  }
+
+  const factor = 10 ** maxDecimals;
+  const rounded = Math.round(numericValue * factor) / factor;
+  const fixed = rounded.toFixed(maxDecimals);
+
+  // Keep significant precision but remove unnecessary trailing zeros.
+  return fixed.replace(/\.?0+$/, '');
+}
+
 function toCents(value) {
   return Math.round(Number(normalizeAmount(value)) * 100);
 }
@@ -51,6 +66,7 @@ function calculateTotalReceivable(principal, interestRate, durationMonths, inter
 
 module.exports = {
   normalizeAmount,
+  normalizeRate,
   toCents,
   fromCents,
   addAmounts,
