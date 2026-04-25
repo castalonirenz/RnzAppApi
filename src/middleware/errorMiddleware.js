@@ -1,6 +1,7 @@
 function notFoundHandler(req, res) {
   res.status(404).json({
     success: false,
+    status: 'error',
     message: 'Route not found.'
   });
 }
@@ -14,6 +15,7 @@ function errorHandler(err, req, res, next) {
 
   res.status(statusCode).json({
     success: false,
+    status: 'error',
     message: err.message || 'Internal server error.',
     ...(err.details ? { details: err.details } : {})
   });
