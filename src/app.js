@@ -44,6 +44,7 @@ app.use(morgan('dev'));
 app.get('/health', (req, res) => {
   res.json({
     success: true,
+    status: 'success',
     message: 'My Borrower API is running.'
   });
 });

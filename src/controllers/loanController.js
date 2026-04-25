@@ -6,6 +6,7 @@ exports.listLoans = asyncHandler(async (req, res) => {
 
   res.json({
     success: true,
+    status: 'success',
     data: loans
   });
 });
@@ -15,6 +16,7 @@ exports.createLoan = asyncHandler(async (req, res) => {
 
   res.status(201).json({
     success: true,
+    status: 'success',
     message: 'Loan created successfully.',
     data: loan
   });
@@ -25,6 +27,7 @@ exports.getLoan = asyncHandler(async (req, res) => {
 
   res.json({
     success: true,
+    status: 'success',
     data: loan
   });
 });
@@ -34,6 +37,7 @@ exports.updateLoan = asyncHandler(async (req, res) => {
 
   res.json({
     success: true,
+    status: 'success',
     message: 'Loan updated successfully.',
     data: loan
   });
@@ -44,6 +48,7 @@ exports.updateLoanStatus = asyncHandler(async (req, res) => {
 
   res.json({
     success: true,
+    status: 'success',
     message: 'Loan status updated successfully.',
     data: loan
   });
@@ -52,7 +57,11 @@ exports.updateLoanStatus = asyncHandler(async (req, res) => {
 exports.deleteLoan = asyncHandler(async (req, res) => {
   await LoanService.deleteLoan(req.user.id, req.params.id);
 
-  res.status(204).send();
+  res.json({
+    success: true,
+    status: 'success',
+    message: 'Loan deleted successfully.'
+  });
 });
 
 exports.addPayment = asyncHandler(async (req, res) => {
@@ -65,6 +74,7 @@ exports.addPayment = asyncHandler(async (req, res) => {
 
   res.status(201).json({
     success: true,
+    status: 'success',
     message: 'Payment recorded successfully.',
     data: result
   });
@@ -75,6 +85,7 @@ exports.getLoanHistory = asyncHandler(async (req, res) => {
 
   res.json({
     success: true,
+    status: 'success',
     data: result.history
   });
 });

@@ -24,7 +24,17 @@ const sharedExpenseWriteValidationRules = [
     .withMessage('description must be at most 500 characters.'),
   body('participants')
     .isArray({ min: 1, max: 20 })
-    .withMessage('participants must be an array with 1 to 20 items.'),
+    .withMessage('participants must be an array with 1 to 20 items.')
+    .custom((participants) => {
+      const normalized = participants.map((name) => String(name || '').trim());
+      const unique = new Set(normalized);
+
+      if (unique.size !== normalized.length) {
+        throw new Error('participants must be unique.');
+      }
+
+      return true;
+    }),
   body('participants.*')
     .isString()
     .withMessage('each participant must be text.')
@@ -32,7 +42,28 @@ const sharedExpenseWriteValidationRules = [
     .notEmpty()
     .withMessage('participant names cannot be empty.')
     .isLength({ max: 100 })
-    .withMessage('participant names must be at most 100 characters.')
+    .withMessage('participant names must be at most 100 characters.'),
+  body('split_mode')
+    .optional()
+    .isIn(['equal', 'custom'])
+    .withMessage('split_mode must be equal or custom.'),
+  body('participant_shares')
+    .optional()
+    .isArray({ min: 1 })
+    .withMessage('participant_shares must be a non-empty array.'),
+  body('participant_shares.*.name')
+    .optional()
+    .isString()
+    .withMessage('participant_shares name must be text.')
+    .trim()
+    .notEmpty()
+    .withMessage('participant_shares name is required.')
+    .isLength({ max: 100 })
+    .withMessage('participant_shares name must be at most 100 characters.'),
+  body('participant_shares.*.amount')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('participant_shares amount must be zero or greater.')
 ];
 
 router.get(
