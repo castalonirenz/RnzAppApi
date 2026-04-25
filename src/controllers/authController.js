@@ -6,6 +6,7 @@ exports.register = asyncHandler(async (req, res) => {
 
   res.status(201).json({
     success: true,
+    status: 'success',
     message: 'User registered successfully.',
     data: result
   });
@@ -16,6 +17,7 @@ exports.login = asyncHandler(async (req, res) => {
 
   res.json({
     success: true,
+    status: 'success',
     message: 'Login successful.',
     data: result
   });
@@ -24,6 +26,7 @@ exports.login = asyncHandler(async (req, res) => {
 exports.logout = asyncHandler(async (req, res) => {
   res.json({
     success: true,
+    status: 'success',
     message: 'Logout successful. Remove the token on the client side.'
   });
 });
@@ -33,6 +36,7 @@ exports.getUser = asyncHandler(async (req, res) => {
 
   res.json({
     success: true,
+    status: 'success',
     data: result
   });
 });
