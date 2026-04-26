@@ -19,9 +19,13 @@ Body:
 {
   "name": "Juan Dela Cruz",
   "email": "juan@example.com",
-  "password": "secret123"
+  "password": "secret123",
+  "confirm_password": "secret123"
 }
 ```
+
+- Password minimum length: 8 characters.
+- `confirm_password` must match `password`.
 
 ### `POST /login`
 Body:
@@ -38,6 +42,31 @@ Protected.
 
 ### `GET /user`
 Protected.
+
+### `POST /forgot-password`
+Body:
+
+```json
+{
+  "email": "juan@example.com"
+}
+```
+
+- Always returns success message even if email does not exist (security-safe behavior).
+
+### `POST /reset-password`
+Body:
+
+```json
+{
+  "token": "reset_token_from_email",
+  "password": "newSecret123",
+  "confirm_password": "newSecret123"
+}
+```
+
+- Password minimum length: 8 characters.
+- `confirm_password` must match `password`.
 
 ## Loans
 
