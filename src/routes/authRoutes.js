@@ -12,8 +12,13 @@ router.post(
     body('name').trim().notEmpty().withMessage('Name is required.'),
     body('email').isEmail().withMessage('A valid email is required.'),
     body('password')
-      .isLength({ min: 6 })
-      .withMessage('Password must be at least 6 characters long.')
+      .isLength({ min: 8 })
+      .withMessage('Password must be at least 8 characters long.'),
+    body('confirm_password')
+      .notEmpty()
+      .withMessage('confirm_password is required.')
+      .custom((value, { req }) => value === req.body.password)
+      .withMessage('Password and confirm_password must match.')
   ],
   validateRequest,
   authController.register
@@ -27,6 +32,30 @@ router.post(
   ],
   validateRequest,
   authController.login
+);
+
+router.post(
+  '/forgot-password',
+  [body('email').isEmail().withMessage('A valid email is required.')],
+  validateRequest,
+  authController.forgotPassword
+);
+
+router.post(
+  '/reset-password',
+  [
+    body('token').trim().notEmpty().withMessage('Reset token is required.'),
+    body('password')
+      .isLength({ min: 8 })
+      .withMessage('Password must be at least 8 characters long.'),
+    body('confirm_password')
+      .notEmpty()
+      .withMessage('confirm_password is required.')
+      .custom((value, { req }) => value === req.body.password)
+      .withMessage('Password and confirm_password must match.')
+  ],
+  validateRequest,
+  authController.resetPassword
 );
 
 router.post('/logout', authMiddleware, authController.logout);

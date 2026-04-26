@@ -40,3 +40,29 @@ exports.getUser = asyncHandler(async (req, res) => {
     data: result
   });
 });
+
+exports.forgotPassword = asyncHandler(async (req, res) => {
+  const result = await AuthService.requestPasswordReset(req.body);
+
+  const payload = {
+    success: true,
+    status: 'success',
+    message: result.message
+  };
+
+  if (result.data) {
+    payload.data = result.data;
+  }
+
+  res.json(payload);
+});
+
+exports.resetPassword = asyncHandler(async (req, res) => {
+  const result = await AuthService.resetPassword(req.body);
+
+  res.json({
+    success: true,
+    status: 'success',
+    message: result.message
+  });
+});

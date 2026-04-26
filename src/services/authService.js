@@ -1,16 +1,22 @@
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const env = require('../config/env');
 const UserModel = require('../models/userModel');
 const LoanModel = require('../models/loanModel');
 const HttpError = require('../utils/httpError');
+const { sendPasswordResetEmail } = require('../utils/email');
 
 class AuthService {
-  static register = async ({ name, email, password }) => {
+  static register = async ({ name, email, password, confirm_password }) => {
     const existingUser = await UserModel.findByEmail(email);
 
     if (existingUser) {
       throw new HttpError(409, 'Email is already registered.');
+    }
+
+    if (String(password || '') !== String(confirm_password || '')) {
+      throw new HttpError(422, 'Password and confirm_password must match.');
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -39,6 +45,82 @@ class AuthService {
     const safeUser = await UserModel.findById(user.id);
     return this.buildAuthResponse(safeUser);
   };
+
+  static async requestPasswordReset({ email }) {
+    const normalizedEmail = String(email || '').toLowerCase().trim();
+    const user = await UserModel.findByEmail(normalizedEmail);
+    const verbose = env.authForgotPasswordVerbose;
+
+    const genericMessage =
+      'If an account with that email exists, a password reset link has been sent.';
+
+    if (!user) {
+      return {
+        message: genericMessage,
+        ...(verbose
+          ? {
+            data: {
+              email_sent: false,
+              delivery_method: 'not_found',
+              reason: 'No account matched the provided email.'
+            }
+          }
+          : {})
+      };
+    }
+
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+    const expiresAt = new Date(Date.now() + env.passwordResetTokenExpiresMinutes * 60 * 1000);
+
+    await UserModel.setPasswordResetTokenById(user.id, tokenHash, expiresAt);
+
+    const separator = env.frontendResetPasswordUrl.includes('?') ? '&' : '?';
+    const resetUrl = `${env.frontendResetPasswordUrl}${separator}token=${encodeURIComponent(rawToken)}`;
+
+    const delivery = await sendPasswordResetEmail({
+      to: user.email,
+      name: user.name,
+      resetUrl
+    });
+
+    const debugData = {
+      email_sent: Boolean(delivery?.sent),
+      delivery_method: delivery?.method || 'unknown',
+      ...(delivery?.reason ? { reason: delivery.reason } : {}),
+      ...(delivery?.message_id ? { message_id: delivery.message_id } : {})
+    };
+
+    if (verbose && !delivery?.sent) {
+      debugData.reset_link = resetUrl;
+      debugData.reset_token = rawToken;
+    }
+
+    return {
+      message: genericMessage,
+      ...(verbose ? { data: debugData } : {})
+    };
+  }
+
+  static async resetPassword({ token, password, confirm_password }) {
+    if (String(password || '') !== String(confirm_password || '')) {
+      throw new HttpError(422, 'Password and confirm_password must match.');
+    }
+
+    const tokenHash = crypto.createHash('sha256').update(String(token)).digest('hex');
+    const user = await UserModel.findByValidResetTokenHash(tokenHash);
+
+    if (!user) {
+      throw new HttpError(400, 'Invalid or expired reset token.');
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    await UserModel.updatePasswordById(user.id, hashedPassword);
+
+    return {
+      message: 'Password has been reset successfully.'
+    };
+  }
 
   static async getProfile(userId) {
     const user = await UserModel.findById(userId);

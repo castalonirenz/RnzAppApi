@@ -17,6 +17,14 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
       required: true
+    },
+    resetPasswordTokenHash: {
+      type: String,
+      default: null
+    },
+    resetPasswordExpiresAt: {
+      type: Date,
+      default: null
     }
   },
   {
@@ -24,9 +32,11 @@ const userSchema = new mongoose.Schema(
   }
 );
 
+userSchema.index({ resetPasswordTokenHash: 1 });
+
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 
-function toUserDTO(userDoc, includePassword = false) {
+function toUserDTO(userDoc, includePassword = false, includeResetFields = false) {
   if (!userDoc) {
     return null;
   }
@@ -39,10 +49,22 @@ function toUserDTO(userDoc, includePassword = false) {
   };
 
   if (includePassword) {
-    return {
+    const withPassword = {
       ...base,
       password: userDoc.password
     };
+
+    if (includeResetFields) {
+      return {
+        ...withPassword,
+        reset_password_token_hash: userDoc.resetPasswordTokenHash || null,
+        reset_password_expires_at: userDoc.resetPasswordExpiresAt
+          ? new Date(userDoc.resetPasswordExpiresAt).toISOString()
+          : null
+      };
+    }
+
+    return withPassword;
   }
 
   return base;
@@ -67,6 +89,40 @@ class UserModel {
   static async findByIdWithPassword(id) {
     const user = await User.findById(id).lean();
     return toUserDTO(user, true);
+  }
+
+  static async setPasswordResetTokenById(id, tokenHash, expiresAt) {
+    await User.updateOne(
+      { _id: id },
+      {
+        $set: {
+          resetPasswordTokenHash: tokenHash,
+          resetPasswordExpiresAt: expiresAt
+        }
+      }
+    );
+  }
+
+  static async findByValidResetTokenHash(tokenHash) {
+    const user = await User.findOne({
+      resetPasswordTokenHash: tokenHash,
+      resetPasswordExpiresAt: { $gt: new Date() }
+    }).lean();
+
+    return toUserDTO(user, true, true);
+  }
+
+  static async updatePasswordById(id, hashedPassword) {
+    await User.updateOne(
+      { _id: id },
+      {
+        $set: {
+          password: hashedPassword,
+          resetPasswordTokenHash: null,
+          resetPasswordExpiresAt: null
+        }
+      }
+    );
   }
 }
 
