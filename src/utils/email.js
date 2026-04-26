@@ -47,16 +47,37 @@ async function sendPasswordResetEmail({ to, name, resetUrl }) {
   if (!hasSmtpConfig()) {
     console.warn('SMTP is not configured. Password reset email not sent.');
     console.warn(`Password reset link for ${to}: ${resetUrl}`);
-    return;
+    return {
+      sent: false,
+      method: 'log',
+      reason: 'SMTP is not configured.'
+    };
   }
 
-  await getTransporter().sendMail({
-    from: env.smtpFrom,
-    to,
-    subject,
-    text,
-    html
-  });
+  try {
+    const info = await getTransporter().sendMail({
+      from: env.smtpFrom,
+      to,
+      subject,
+      text,
+      html
+    });
+
+    return {
+      sent: true,
+      method: 'smtp',
+      message_id: info.messageId || null,
+      accepted: Array.isArray(info.accepted) ? info.accepted : [],
+      rejected: Array.isArray(info.rejected) ? info.rejected : []
+    };
+  } catch (error) {
+    console.error('Failed to send password reset email:', error.message);
+    return {
+      sent: false,
+      method: 'smtp_error',
+      reason: error.message
+    };
+  }
 }
 
 module.exports = {

@@ -16,6 +16,9 @@ if (!mongoUri && nodeEnv === 'production') {
 module.exports = {
   port: Number(process.env.PORT) || 4000,
   nodeEnv,
+  authForgotPasswordVerbose:
+    (process.env.AUTH_FORGOT_PASSWORD_VERBOSE ||
+      (nodeEnv === 'production' ? 'false' : 'true')).toLowerCase() === 'true',
   jwtSecret: process.env.JWT_SECRET || 'change-this-secret',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
   passwordResetTokenExpiresMinutes: Number(process.env.PASSWORD_RESET_TOKEN_EXPIRES_MINUTES) || 30,

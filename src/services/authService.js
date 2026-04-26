@@ -49,12 +49,24 @@ class AuthService {
   static async requestPasswordReset({ email }) {
     const normalizedEmail = String(email || '').toLowerCase().trim();
     const user = await UserModel.findByEmail(normalizedEmail);
+    const verbose = env.authForgotPasswordVerbose;
 
     const genericMessage =
       'If an account with that email exists, a password reset link has been sent.';
 
     if (!user) {
-      return { message: genericMessage };
+      return {
+        message: genericMessage,
+        ...(verbose
+          ? {
+            data: {
+              email_sent: false,
+              delivery_method: 'not_found',
+              reason: 'No account matched the provided email.'
+            }
+          }
+          : {})
+      };
     }
 
     const rawToken = crypto.randomBytes(32).toString('hex');
@@ -66,13 +78,28 @@ class AuthService {
     const separator = env.frontendResetPasswordUrl.includes('?') ? '&' : '?';
     const resetUrl = `${env.frontendResetPasswordUrl}${separator}token=${encodeURIComponent(rawToken)}`;
 
-    await sendPasswordResetEmail({
+    const delivery = await sendPasswordResetEmail({
       to: user.email,
       name: user.name,
       resetUrl
     });
 
-    return { message: genericMessage };
+    const debugData = {
+      email_sent: Boolean(delivery?.sent),
+      delivery_method: delivery?.method || 'unknown',
+      ...(delivery?.reason ? { reason: delivery.reason } : {}),
+      ...(delivery?.message_id ? { message_id: delivery.message_id } : {})
+    };
+
+    if (verbose && !delivery?.sent) {
+      debugData.reset_link = resetUrl;
+      debugData.reset_token = rawToken;
+    }
+
+    return {
+      message: genericMessage,
+      ...(verbose ? { data: debugData } : {})
+    };
   }
 
   static async resetPassword({ token, password, confirm_password }) {

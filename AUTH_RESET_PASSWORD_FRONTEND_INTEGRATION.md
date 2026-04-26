@@ -100,7 +100,12 @@ Base URL: `http://localhost:4000/api`
 {
   "success": true,
   "status": "success",
-  "message": "If an account with that email exists, a password reset link has been sent."
+  "message": "If an account with that email exists, a password reset link has been sent.",
+  "data": {
+    "email_sent": true,
+    "delivery_method": "smtp",
+    "message_id": "optional_message_id"
+  }
 }
 ```
 
@@ -108,6 +113,11 @@ Notes:
 
 - This message is intentionally generic for security.
 - Existing users are unchanged in DB and can reset password through this flow.
+- `data` appears when `AUTH_FORGOT_PASSWORD_VERBOSE=true`.
+- In verbose mode, if sending fails, backend includes `email_sent=false` and debug fields:
+  - `reason`
+  - `reset_link`
+  - `reset_token`
 
 ---
 
@@ -170,6 +180,7 @@ SMTP_SECURE=false
 SMTP_USER=your-smtp-user
 SMTP_PASS=your-smtp-pass
 SMTP_FROM="My Borrower <no-reply@myborrower.app>"
+AUTH_FORGOT_PASSWORD_VERBOSE=true
 ```
 
 If SMTP is not configured, backend logs the reset link in server logs for development.

@@ -53,6 +53,11 @@ Body:
 ```
 
 - Always returns success message even if email does not exist (security-safe behavior).
+- If `AUTH_FORGOT_PASSWORD_VERBOSE=true`, response also includes delivery debug data:
+  - `data.email_sent`
+  - `data.delivery_method`
+  - `data.reason` (if failed)
+  - `data.reset_link` and `data.reset_token` (dev troubleshooting fallback)
 
 ### `POST /reset-password`
 Body:
