@@ -4,6 +4,7 @@ const loanRoutes = require('./loanRoutes');
 const expenseRoutes = require('./expenseRoutes');
 const budgetRoutes = require('./budgetRoutes');
 const sharedExpenseRoutes = require('./sharedExpenseRoutes');
+const payableRoutes = require('./payableRoutes');
 
 const router = express.Router();
 
@@ -12,5 +13,6 @@ router.use('/api', loanRoutes);
 router.use('/api', expenseRoutes);
 router.use('/api', budgetRoutes);
 router.use('/api', sharedExpenseRoutes);
+router.use('/api', payableRoutes);
 
 module.exports = router;

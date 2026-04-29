@@ -1,5 +1,6 @@
 const { mongoose } = require('../config/database');
 const { resolveBudgetWindow } = require('../utils/budgetPeriod');
+const { SUPPORTED_PERIOD_TYPES } = require('../utils/periodTypes');
 require('./expenseModel');
 
 const Expense = mongoose.models.Expense;
@@ -23,7 +24,7 @@ const budgetSchema = new mongoose.Schema(
     },
     periodType: {
       type: String,
-      enum: ['daily', 'monthly', 'yearly'],
+      enum: SUPPORTED_PERIOD_TYPES,
       required: true
     },
     startDate: {

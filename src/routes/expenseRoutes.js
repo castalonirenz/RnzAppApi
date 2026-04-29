@@ -3,8 +3,10 @@ const { body, param, query } = require('express-validator');
 const expenseController = require('../controllers/expenseController');
 const authMiddleware = require('../middleware/authMiddleware');
 const validateRequest = require('../middleware/validateRequest');
+const { SUPPORTED_PERIOD_TYPES, buildPeriodTypeValidationMessage } = require('../utils/periodTypes');
 
 const router = express.Router();
+const periodValidationMessage = buildPeriodTypeValidationMessage('period');
 
 router.use(authMiddleware);
 
@@ -58,7 +60,7 @@ router.delete(
 
 router.get(
   '/expenses/summary',
-  [query('period').optional().isIn(['daily', 'monthly', 'yearly']).withMessage('Invalid period.')],
+  [query('period').optional().isIn(SUPPORTED_PERIOD_TYPES).withMessage(periodValidationMessage)],
   validateRequest,
   expenseController.summary
 );

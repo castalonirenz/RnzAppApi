@@ -1,4 +1,5 @@
 const { mongoose } = require('../config/database');
+const { buildSummaryDateExpression } = require('../utils/periodTypes');
 
 const expenseSchema = new mongoose.Schema(
   {
@@ -110,12 +111,7 @@ class ExpenseModel {
   }
 
   static async getSummaryByPeriod(userId, period) {
-    const dateExpression =
-      period === 'daily'
-        ? { $dateToString: { format: '%Y-%m-%d', date: '$expenseDate' } }
-        : period === 'yearly'
-          ? { $dateToString: { format: '%Y', date: '$expenseDate' } }
-          : { $dateToString: { format: '%Y-%m', date: '$expenseDate' } };
+    const dateExpression = buildSummaryDateExpression(period);
 
     const rows = await Expense.aggregate([
       { $match: { userId: new mongoose.Types.ObjectId(userId) } },

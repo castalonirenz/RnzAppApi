@@ -3,8 +3,10 @@ const { body, param, query } = require('express-validator');
 const budgetController = require('../controllers/budgetController');
 const authMiddleware = require('../middleware/authMiddleware');
 const validateRequest = require('../middleware/validateRequest');
+const { SUPPORTED_PERIOD_TYPES, buildPeriodTypeValidationMessage } = require('../utils/periodTypes');
 
 const router = express.Router();
+const periodTypeValidationMessage = buildPeriodTypeValidationMessage('period_type');
 
 router.use(authMiddleware);
 
@@ -17,8 +19,8 @@ router.post(
     body('amount_limit').isFloat({ gt: 0 }).withMessage('amount_limit must be greater than zero.'),
     body('period_type')
       .trim()
-      .isIn(['daily', 'monthly', 'yearly'])
-      .withMessage('period_type must be daily, monthly, or yearly.')
+      .isIn(SUPPORTED_PERIOD_TYPES)
+      .withMessage(periodTypeValidationMessage)
   ],
   validateRequest,
   budgetController.createBudget
@@ -33,8 +35,8 @@ router.patch(
     body('period_type')
       .optional()
       .trim()
-      .isIn(['daily', 'monthly', 'yearly'])
-      .withMessage('period_type must be daily, monthly, or yearly.'),
+      .isIn(SUPPORTED_PERIOD_TYPES)
+      .withMessage(periodTypeValidationMessage),
     body('start_date').optional().isISO8601().withMessage('start_date must be a valid ISO date.'),
     body('end_date').optional({ nullable: true }).isISO8601().withMessage('end_date must be a valid ISO date.'),
     body().custom((_, { req }) => {
