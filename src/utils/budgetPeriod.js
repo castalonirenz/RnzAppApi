@@ -1,7 +1,13 @@
-function normalizePeriodType(periodType) {
-  const normalized = String(periodType || '').toLowerCase();
+const {
+  normalizePeriodType: normalizePeriodTypeValue,
+  isSupportedPeriodType,
+  getPeriodTypeConfig
+} = require('./periodTypes');
 
-  if (!['daily', 'monthly', 'yearly'].includes(normalized)) {
+function normalizePeriodType(periodType) {
+  const normalized = normalizePeriodTypeValue(periodType);
+
+  if (!isSupportedPeriodType(normalized)) {
     throw new Error('Invalid period type.');
   }
 
@@ -16,15 +22,8 @@ function getPeriodStart(date, periodType) {
     throw new Error('Invalid date value.');
   }
 
-  if (normalizedPeriod === 'daily') {
-    return new Date(Date.UTC(source.getUTCFullYear(), source.getUTCMonth(), source.getUTCDate()));
-  }
-
-  if (normalizedPeriod === 'yearly') {
-    return new Date(Date.UTC(source.getUTCFullYear(), 0, 1));
-  }
-
-  return new Date(Date.UTC(source.getUTCFullYear(), source.getUTCMonth(), 1));
+  const periodConfig = getPeriodTypeConfig(normalizedPeriod);
+  return periodConfig.getStart(source);
 }
 
 function derivePeriodEnd(startDate, periodType) {
@@ -35,15 +34,8 @@ function derivePeriodEnd(startDate, periodType) {
     throw new Error('Invalid start date.');
   }
 
-  if (normalizedPeriod === 'daily') {
-    return new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate() + 1) - 1);
-  }
-
-  if (normalizedPeriod === 'yearly') {
-    return new Date(Date.UTC(start.getUTCFullYear() + 1, 0, 1) - 1);
-  }
-
-  return new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 1) - 1);
+  const periodConfig = getPeriodTypeConfig(normalizedPeriod);
+  return periodConfig.getEnd(start);
 }
 
 function resolveBudgetWindow({ startDate, endDate, periodType }) {

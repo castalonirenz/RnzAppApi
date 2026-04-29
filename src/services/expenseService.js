@@ -2,6 +2,7 @@ const ExpenseModel = require('../models/expenseModel');
 const HttpError = require('../utils/httpError');
 const { normalizeAmount } = require('../utils/decimal');
 const BudgetService = require('./budgetService');
+const { normalizePeriodType, isSupportedPeriodType, buildPeriodTypeValidationMessage } = require('../utils/periodTypes');
 
 class ExpenseService {
   static async listExpenses(userId) {
@@ -83,10 +84,10 @@ class ExpenseService {
   }
 
   static async getSummary(userId, period) {
-    const normalizedPeriod = String(period || 'monthly').toLowerCase();
+    const normalizedPeriod = normalizePeriodType(period || 'monthly');
 
-    if (!['daily', 'monthly', 'yearly'].includes(normalizedPeriod)) {
-      throw new HttpError(422, 'period must be daily, monthly, or yearly.');
+    if (!isSupportedPeriodType(normalizedPeriod)) {
+      throw new HttpError(422, buildPeriodTypeValidationMessage('period'));
     }
 
     return ExpenseModel.getSummaryByPeriod(userId, normalizedPeriod);
