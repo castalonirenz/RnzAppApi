@@ -28,6 +28,7 @@ function formatLoan(loan) {
 
   const totalPaid = Number(loan.total_payments || 0).toFixed(2);
   const remainingBalance = subtractAmounts(loan.total_receivable, totalPaid);
+  const monthlyPayment = normalizeAmount(Number(loan.total_receivable) / Number(loan.duration_months));
 
   return {
     id: loan.id,
@@ -40,11 +41,13 @@ function formatLoan(loan) {
     interest_period: loan.interest_period || 'month',
     duration_months: loan.duration_months,
     total_receivable: normalizeAmount(loan.total_receivable),
+    monthly_payment: monthlyPayment,
     total_payments: totalPaid,
     remaining_balance: remainingBalance,
     status: normalizeStatus(loan.status),
     release_date: loan.release_date || null,
-    created_at: loan.created_at
+    created_at: loan.created_at,
+
   };
 }
 

@@ -1,5 +1,6 @@
 const { mongoose } = require('../config/database');
 const PaymentModel = require('./paymentModel');
+const { normalizeAmount } = require('../utils/decimal');
 
 const loanSchema = new mongoose.Schema(
   {
@@ -84,10 +85,12 @@ function toLoanDTO(loanDoc, totalPaid = '0.00') {
         : 'month',
     duration_months: loanDoc.durationMonths,
     total_receivable: loanDoc.totalReceivable,
+    monthly_payment: normalizeAmount(Number(loanDoc.totalReceivable) / Number(loanDoc.durationMonths)),
     status: String(loanDoc.status || 'pending').toLowerCase(),
     release_date: loanDoc.releaseDate ? new Date(loanDoc.releaseDate).toISOString() : null,
     created_at: new Date(loanDoc.createdAt).toISOString(),
-    total_payments: totalPaid
+    total_payments: totalPaid,
+
   };
 }
 
